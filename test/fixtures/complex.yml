@@ -1,0 +1,97 @@
+openapi: "3.0.3"
+info:
+  title: Complex API
+  version: "1.0"
+paths:
+  /search:
+    get:
+      operationId: searchItems
+      parameters:
+        - name: q
+          in: query
+          required: true
+          schema:
+            type: string
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 20
+      responses:
+        "200":
+          description: Search results
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/SearchResult"
+  /nested:
+    get:
+      operationId: getNested
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/NestedObject"
+components:
+  schemas:
+    SearchResult:
+      type: object
+      properties:
+        score:
+          type: number
+          format: float
+        item:
+          $ref: "#/components/schemas/Item"
+    Item:
+      type: object
+      properties:
+        id:
+          type: string
+        title:
+          type: string
+        metadata:
+          $ref: "#/components/schemas/Metadata"
+    Metadata:
+      type: object
+      properties:
+        tags:
+          type: array
+          items:
+            type: string
+        source:
+          type: string
+          nullable: true
+        priority:
+          type: integer
+          enum: [1, 2, 3]
+    NestedObject:
+      type: object
+      properties:
+        level1:
+          type: object
+          properties:
+            level2:
+              type: object
+              properties:
+                value:
+                  type: string
+                level3:
+                  type: object
+                  properties:
+                    depth:
+                      type: integer
+                    items:
+                      type: array
+                      items:
+                        type: object
+                        properties:
+                          id:
+                            type: string
+                          data:
+                            type: object
+                            additionalProperties:
+                              type: string

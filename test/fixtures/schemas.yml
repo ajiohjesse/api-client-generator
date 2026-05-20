@@ -1,0 +1,112 @@
+openapi: "3.0.3"
+info:
+  title: Schema Edge Cases
+  version: "1.0"
+paths:
+  /items:
+    get:
+      operationId: getItems
+      responses:
+        "200":
+          description: List of items
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ItemList"
+components:
+  schemas:
+    ItemList:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/Item"
+        total:
+          type: integer
+    Item:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        status:
+          type: string
+          enum: [active, inactive, archived]
+        metadata:
+          type: object
+          additionalProperties:
+            type: string
+        category:
+          nullable: true
+          $ref: "#/components/schemas/Category"
+        tags:
+          type: array
+          items:
+            type: string
+        label:
+          type: string
+          description: A display label
+          default: "untitled"
+        email:
+          type: string
+          format: email
+        createdAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - name
+    Category:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+    Pet:
+      allOf:
+        - $ref: "#/components/schemas/Item"
+        - type: object
+          properties:
+            breed:
+              type: string
+    Error:
+      oneOf:
+        - $ref: "#/components/schemas/ValidationError"
+        - $ref: "#/components/schemas/SystemError"
+    Response:
+      anyOf:
+        - $ref: "#/components/schemas/SuccessResponse"
+        - $ref: "#/components/schemas/Error"
+    ValidationError:
+      type: object
+      properties:
+        field:
+          type: string
+        message:
+          type: string
+    SystemError:
+      type: object
+      properties:
+        code:
+          type: integer
+        message:
+          type: string
+    SuccessResponse:
+      type: object
+      properties:
+        data:
+          type: string
+    TreeNode:
+      type: object
+      properties:
+        value:
+          type: string
+        children:
+          type: array
+          items:
+            $ref: "#/components/schemas/TreeNode"
+    EmptySchema:
+      type: object

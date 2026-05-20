@@ -1,0 +1,45 @@
+{
+  "name": "api-client-generator",
+  "version": "0.1.0",
+  "description": "Generate a typesafe fetch-based API client from an OpenAPI 3.x spec",
+  "type": "module",
+  "bin": {
+    "api-client-gen": "./dist/cli.js"
+  },
+  "files": [
+    "dist"
+  ],
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsup --watch",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
+    "typecheck": "tsc --noEmit",
+    "prepublishOnly": "npm run build && npm run test",
+    "generate:example": "bun ./dist/cli.js generate -i ./test/fixtures/petstore.json -o ./examples/petstore-client",
+    "link": "bun link",
+    "unlink": "bun unlink"
+  },
+  "dependencies": {
+    "commander": "^12.1.0",
+    "js-yaml": "^4.1.0",
+    "chalk": "^5.3.0",
+    "ora": "^8.1.0"
+  },
+  "devDependencies": {
+    "@types/js-yaml": "^4.0.9",
+    "@types/node": "^22.5.0",
+    "@vitest/coverage-v8": "^2.1.0",
+    "tsup": "^8.3.0",
+    "typescript": "^5.6.2",
+    "vitest": "^2.1.0"
+  },
+  "license": "MIT"
+}
