@@ -1,4 +1,4 @@
-import { parseSpec } from '../parser/index.js';
+import { parseSpec, getServerUrl } from '../parser/index.js';
 import { generateTypes } from './types.js';
 import { generateClient } from './client.js';
 import type { GeneratorOptions } from '../types.js';
@@ -12,11 +12,14 @@ export interface GenerateResult {
 export function generate(spec: unknown, options: GeneratorOptions): GenerateResult {
   const { operations, schemas } = parseSpec(spec);
 
+  const serverUrl = getServerUrl(spec);
+
   const { types } = generateTypes(schemas);
   const typesCode = types;
 
   const { code: clientCode } = generateClient(operations, {
     clientName: options.clientName,
+    serverUrl,
   });
 
   const clientName = options.clientName || 'ApiClient';

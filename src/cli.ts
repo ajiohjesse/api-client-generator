@@ -6,7 +6,7 @@ import { generateCommand } from './commands/generate.js';
 const program = new Command();
 
 program
-  .name('api-client-gen')
+  .name('@rehx/api-client-generator')
   .description('Generate a typesafe fetch-based API client from an OpenAPI 3.x spec')
   .version('0.1.0');
 

@@ -46,7 +46,8 @@ export function schemaToType(
 
   if (schema.oneOf && schema.oneOf.length > 0) {
     const parts = schema.oneOf.map((s) => schemaToType(s, strategy, indent));
-    return parts.join(' | ');
+    const union = parts.join(' | ');
+    return union;
   }
 
   if (schema.anyOf && schema.anyOf.length > 0) {

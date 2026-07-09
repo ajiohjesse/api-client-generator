@@ -64,8 +64,14 @@ export interface SchemaObject {
   description?: string;
   format?: string;
   default?: unknown;
+  discriminator?: DiscriminatorObject;
   /** Set by resolver when a $ref is fully resolved — codegen uses this instead of parsing $ref strings */
   _sourceName?: string;
+}
+
+export interface DiscriminatorObject {
+  propertyName: string;
+  mapping?: Record<string, string>;
 }
 
 export interface ParsedOperation {

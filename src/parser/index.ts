@@ -10,6 +10,12 @@ import type {
 import { resolveSchema } from './resolver.js';
 import { toTypeName } from '../naming.js';
 
+export function detectOasVersion(spec: Record<string, unknown>): string | null {
+  if (spec.swagger === '2.0') return '2.0';
+  if (typeof spec.openapi === 'string') return spec.openapi;
+  return null;
+}
+
 function extractOperationId(operation: OperationObject, method: string, path: string): string {
   if (operation.operationId) {
     return operation.operationId;
@@ -27,14 +33,34 @@ function mergeParentParams(pathItem: PathItem, operation: OperationObject): Para
   return [...(pathItem.parameters || []), ...(operation.parameters || [])];
 }
 
+export function getServerUrl(data: unknown): string | undefined {
+  const spec = data as Record<string, unknown>;
+  const servers = spec.servers;
+  if (Array.isArray(servers) && servers.length > 0) {
+    const first = servers[0] as Record<string, unknown>;
+    const url = first.url;
+    if (typeof url === 'string') return url;
+  }
+  return undefined;
+}
+
 export function parseSpec(data: unknown): {
   operations: ParsedOperation[];
   schemas: Record<string, SchemaObject>;
 } {
   const spec = data as OpenAPISpec;
 
-  if (!spec.openapi) {
-    throw new Error('Invalid OpenAPI spec: missing "openapi" field');
+  const version = detectOasVersion(data as Record<string, unknown>);
+  if (version === '2.0') {
+    throw new Error(
+      'OpenAPI 2.0 (Swagger) specs are not supported. ' +
+      'Convert your spec to OpenAPI 3.0+ using https://www.npmjs.com/package/swagger2openapi'
+    );
+  }
+  if (!version) {
+    throw new Error(
+      'Unrecognized spec format. Expected an OpenAPI 3.x document with an "openapi" field.'
+    );
   }
 
   if (!spec.paths || typeof spec.paths !== 'object') {

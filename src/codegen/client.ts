@@ -25,7 +25,7 @@ export interface GeneratedClient {
 
 export function generateClient(
   operations: ParsedOperation[],
-  options: { clientName?: string }
+  options: { clientName?: string; serverUrl?: string }
 ): GeneratedClient {
   const clientName = options.clientName || 'ApiClient';
   const importTypes = new Set<string>();
@@ -130,6 +130,11 @@ export function generateClient(
 
   const extraTypesCode = extraTypes.length > 0 ? '\n' + extraTypes.join('\n\n') + '\n' : '';
 
+  const serverUrlStr = options.serverUrl ? `'${options.serverUrl}'` : "''";
+  const baseUrlDesc = options.serverUrl
+    ? `    /** Default base URL from the OpenAPI spec's servers[0]; override via config. */\n`
+    : `    /** Base URL for all requests; must be provided via config. */\n`;
+
   const code = `${importStmt}
 
 export class ApiError extends Error {
@@ -151,11 +156,11 @@ export class ${clientName} {
   readonly #contentType: string | undefined;
 
   constructor(config: {
-    baseUrl: string;
+${baseUrlDesc}    baseUrl?: string;
     headers?: Record<string, string>;
     fetch?: typeof globalThis.fetch;
   }) {
-    this.#baseUrl = config.baseUrl.replace(/\\/+$/, '');
+    this.#baseUrl = (config.baseUrl ?? ${serverUrlStr}).replace(/\\/+$/, '');
     this.#headers = { ...config.headers };
     this.#fetch = config.fetch ?? globalThis.fetch;
     this.#contentType = this.#headers['Content-Type'] ?? 'application/json';
