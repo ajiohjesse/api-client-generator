@@ -1,13 +1,13 @@
-# api-client-generator
+# @rehx/api-client-generator
 
-[![npm version](https://img.shields.io/npm/v/api-client-generator?color=blue)](https://www.npmjs.com/package/api-client-generator)
+[![npm version](https://img.shields.io/npm/v/@rehx/api-client-generator?color=blue)](https://www.npmjs.com/package/@rehx/api-client-generator)
 [![CI](https://github.com/ajiohjesse/api-client-generator/actions/workflows/ci.yml/badge.svg)](https://github.com/ajiohjesse/api-client-generator/actions/workflows/ci.yml)
 [![Node](https://img.shields.io/badge/node-%3E%3D18-brightgreen)](https://nodejs.org)
 
 Generate a fully typesafe fetch-based API client from an OpenAPI 3.x spec — zero runtime dependencies.
 
 ```bash
-npx api-client-generator generate -i ./spec.yaml -o ./src/api
+npx @rehx/api-client-generator generate -i ./spec.yaml -o ./src/api
 ```
 
 ## Features
@@ -25,32 +25,32 @@ npx api-client-generator generate -i ./spec.yaml -o ./src/api
 No install needed — just run with `npx`:
 
 ```bash
-npx api-client-generator generate -i ./spec.yaml -o ./src/api
+npx @rehx/api-client-generator generate -i ./spec.yaml -o ./src/api
 ```
 
 Or install globally:
 
 ```bash
-npm install -g api-client-generator
+npm install -g @rehx/api-client-generator
 ```
 
 Or install locally in your project:
 
 ```bash
-npm install --save-dev api-client-generator
+npm install --save-dev @rehx/api-client-generator
 ```
 
 ## Usage
 
 ```bash
 # From a local file
-npx api-client-generator generate -i ./spec.yaml -o ./src/api
+npx @rehx/api-client-generator generate -i ./spec.yaml -o ./src/api
 
 # From a URL
-npx api-client-generator generate -i https://api.example.com/openapi.json -o ./src/api
+npx @rehx/api-client-generator generate -i https://api.example.com/openapi.json -o ./src/api
 
 # With a custom client class name
-npx api-client-generator generate -i ./spec.yaml -o ./src/api --name MyApi
+npx @rehx/api-client-generator generate -i ./spec.yaml -o ./src/api --name MyApi
 ```
 
 ### Generated output
@@ -134,7 +134,7 @@ controller.abort(); // cancels the request
 You can also use the generator programmatically:
 
 ```typescript
-import { generate } from 'api-client-generator';
+import { generate } from '@rehx/api-client-generator';
 
 const spec = { /* your OpenAPI spec object */ };
 
