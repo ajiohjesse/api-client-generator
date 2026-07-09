@@ -8,7 +8,7 @@ import type {
   ParameterObject,
 } from '../types.js';
 import { resolveSchema } from './resolver.js';
-import { toTypeName } from '../codegen/utils.js';
+import { toTypeName } from '../naming.js';
 
 function extractOperationId(operation: OperationObject, method: string, path: string): string {
   if (operation.operationId) {
@@ -45,7 +45,10 @@ export function parseSpec(data: unknown): {
   const schemas: Record<string, SchemaObject> = {};
 
   for (const [name, schema] of Object.entries(rawSchemas)) {
-    schemas[toTypeName(name)] = resolveSchema(schema, spec, new Set(), 0, 10);
+    const typeName = toTypeName(name);
+    const resolved = resolveSchema(schema, spec, new Set(), 0, 10);
+    resolved._sourceName = typeName;
+    schemas[typeName] = resolved;
   }
 
   const methods = ['get', 'post', 'put', 'delete', 'patch', 'options', 'head', 'trace'] as const;
@@ -74,7 +77,7 @@ export function parseSpec(data: unknown): {
       if (operation.requestBody?.content) {
         const jsonContent = operation.requestBody.content['application/json'];
         if (jsonContent?.schema) {
-          op.requestBody = jsonContent.schema;
+          op.requestBody = resolveSchema(jsonContent.schema, spec, new Set(), 0, 10);
           op.hasBody = true;
         }
       }
@@ -82,7 +85,7 @@ export function parseSpec(data: unknown): {
       for (const [status, response] of Object.entries(operation.responses)) {
         const parsed: ParsedResponse = { status };
         if (response.content?.['application/json']?.schema) {
-          parsed.schema = response.content['application/json'].schema;
+          parsed.schema = resolveSchema(response.content['application/json'].schema, spec, new Set(), 0, 10);
         }
         op.responses.push(parsed);
       }

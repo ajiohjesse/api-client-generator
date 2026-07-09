@@ -49,14 +49,15 @@ describe('resolveSchema', () => {
     },
   };
 
-  it('resolves a schema with $ref', () => {
+  it('resolves a schema with $ref and sets _sourceName', () => {
     const schema: SchemaObject = { $ref: '#/components/schemas/Pet' };
     const result = resolveSchema(schema, root);
     expect(result.type).toBe('object');
     expect(result.properties?.name).toEqual({ type: 'string' });
+    expect(result._sourceName).toBe('Pet');
   });
 
-  it('preserves $ref in allOf items for codegen detection', () => {
+  it('resolves $ref in allOf items and sets _sourceName', () => {
     const schema: SchemaObject = {
       allOf: [
         { $ref: '#/components/schemas/Pet' },
@@ -66,10 +67,11 @@ describe('resolveSchema', () => {
     const result = resolveSchema(schema, root);
     expect(result.allOf).toBeDefined();
     expect(result.allOf!.length).toBe(2);
-    expect(result.allOf![0].$ref).toBe('#/components/schemas/Pet');
+    expect(result.allOf![0]._sourceName).toBe('Pet');
+    expect(result.allOf![0].$ref).toBeUndefined();
   });
 
-  it('preserves $ref in properties for codegen', () => {
+  it('resolves $ref in properties and sets _sourceName', () => {
     const schema: SchemaObject = {
       type: 'object',
       properties: {
@@ -78,7 +80,8 @@ describe('resolveSchema', () => {
     };
     const result = resolveSchema(schema, root);
     expect(result.properties?.category).toBeDefined();
-    expect((result.properties?.category as SchemaObject).$ref).toBe('#/components/schemas/Category');
+    expect((result.properties?.category as SchemaObject)._sourceName).toBe('Category');
+    expect((result.properties?.category as SchemaObject).$ref).toBeUndefined();
   });
 
   it('handles nullable in combination with $ref', () => {
@@ -89,6 +92,7 @@ describe('resolveSchema', () => {
     const result = resolveSchema(schema, root);
     expect(result.nullable).toBe(true);
     expect(result.type).toBe('object');
+    expect(result._sourceName).toBe('Category');
   });
 
   it('handles circular refs gracefully', () => {
@@ -113,22 +117,24 @@ describe('resolveSchema', () => {
     expect(result).toBeDefined();
   });
 
-  it('preserves $ref in array items for codegen', () => {
+  it('resolves $ref in array items and sets _sourceName', () => {
     const schema: SchemaObject = {
       type: 'array',
       items: { $ref: '#/components/schemas/Tag' },
     };
     const result = resolveSchema(schema, root);
-    expect(result.items?.$ref).toBe('#/components/schemas/Tag');
+    expect(result.items?._sourceName).toBe('Tag');
+    expect(result.items?.$ref).toBeUndefined();
   });
 
-  it('preserves $ref in additionalProperties for codegen', () => {
+  it('resolves $ref in additionalProperties and sets _sourceName', () => {
     const schema: SchemaObject = {
       type: 'object',
       additionalProperties: { $ref: '#/components/schemas/Tag' },
     };
     const result = resolveSchema(schema, root);
     const addProps = result.additionalProperties as SchemaObject;
-    expect(addProps.$ref).toBe('#/components/schemas/Tag');
+    expect(addProps._sourceName).toBe('Tag');
+    expect(addProps.$ref).toBeUndefined();
   });
 });

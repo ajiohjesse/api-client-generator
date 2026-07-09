@@ -1,92 +1,22 @@
 import type { ParsedOperation, SchemaObject } from '../types.js';
+import { schemaToType } from './schema-to-type.js';
+import type { SchemaTypeStrategy } from './schema-to-type.js';
 import {
   operationMethodName,
   buildParamTypeName,
-  toPascalCase,
 } from './utils.js';
 
 function schemaToTypeString(schema: SchemaObject | undefined, importTypes: Set<string>): string {
   if (!schema) return 'void';
 
-  if (schema.nullable) {
-    const inner = schemaToTypeString({ ...schema, nullable: false }, importTypes);
-    const needsParens = inner.includes('&');
-    return needsParens ? `(${inner}) | null` : `${inner} | null`;
-  }
+  const strategy: SchemaTypeStrategy = {
+    refMode: 'import',
+    onRef: (name) => importTypes.add(name),
+    includeDescriptions: false,
+    allOfMode: 'intersection',
+  };
 
-  if (schema.$ref) {
-    const parts = schema.$ref.split('/');
-    const name = toPascalCase(parts[parts.length - 1]);
-    importTypes.add(name);
-    return name;
-  }
-
-  if (schema.allOf && schema.allOf.length > 0) {
-    const parts = schema.allOf.map((s) => schemaToTypeString(s, importTypes));
-    return parts.join(' & ');
-  }
-
-  if (schema.oneOf && schema.oneOf.length > 0) {
-    const parts = schema.oneOf.map((s) => schemaToTypeString(s, importTypes));
-    return parts.join(' | ');
-  }
-
-  if (schema.anyOf && schema.anyOf.length > 0) {
-    const parts = schema.anyOf.map((s) => schemaToTypeString(s, importTypes));
-    return parts.join(' | ');
-  }
-
-  if (schema.enum) {
-    const values = schema.enum.map((v) => {
-      if (typeof v === 'string') return `'${v}'`;
-      return String(v);
-    });
-    return values.join(' | ');
-  }
-
-  if (schema.type === 'array') {
-    if (schema.items) {
-      const itemType = schemaToTypeString(schema.items, importTypes);
-      return `${itemType}[]`;
-    }
-    return 'unknown[]';
-  }
-
-  if (schema.type === 'object' || schema.properties) {
-    if (!schema.properties && !schema.additionalProperties) {
-      return 'Record<string, never>';
-    }
-
-    const lines: string[] = ['{'];
-    if (schema.properties) {
-      const requiredSet = new Set(schema.required || []);
-      for (const [key, prop] of Object.entries(schema.properties)) {
-        const optional = requiredSet.has(key) ? '' : '?';
-        const propType = schemaToTypeString(prop, importTypes);
-        lines.push(`  ${key}${optional}: ${propType};`);
-      }
-    }
-    if (schema.additionalProperties && typeof schema.additionalProperties === 'object') {
-      const valueType = schemaToTypeString(schema.additionalProperties, importTypes);
-      lines.push(`  [key: string]: ${valueType};`);
-    } else if (schema.additionalProperties === true) {
-      lines.push(`  [key: string]: unknown;`);
-    }
-    lines.push('}');
-    return lines.join('\n');
-  }
-
-  switch (schema.type) {
-    case 'integer':
-    case 'number':
-      return 'number';
-    case 'boolean':
-      return 'boolean';
-    case 'string':
-      return 'string';
-    default:
-      return 'unknown';
-  }
+  return schemaToType(schema, strategy);
 }
 
 export interface GeneratedClient {

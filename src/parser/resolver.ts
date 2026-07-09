@@ -1,4 +1,5 @@
 import type { SchemaObject } from '../types.js';
+import { toTypeName } from '../naming.js';
 
 export function resolveRef(ref: string, root: unknown): unknown {
   if (!ref.startsWith('#/')) {
@@ -22,6 +23,12 @@ export function resolveRef(ref: string, root: unknown): unknown {
   return current;
 }
 
+function refSourceName(ref: string): string | null {
+  if (!ref.startsWith('#/components/schemas/')) return null;
+  const parts = ref.split('/');
+  return toTypeName(parts[parts.length - 1]);
+}
+
 export function resolveSchema(
   schema: SchemaObject,
   root: unknown,
@@ -35,12 +42,16 @@ export function resolveSchema(
 
   if (schema.$ref) {
     if (visited.has(schema.$ref)) {
-      return { type: 'object', description: 'Circular reference - truncated' };
+      return { type: 'object', description: 'Circular reference - truncated', _sourceName: refSourceName(schema.$ref) ?? undefined };
     }
     visited.add(schema.$ref);
+    const sourceName = refSourceName(schema.$ref);
     const resolved = resolveRef(schema.$ref, root) as SchemaObject;
     const result = resolveSchema(resolved, root, new Set(visited), depth + 1, maxDepth);
 
+    if (sourceName) {
+      result._sourceName = sourceName;
+    }
     if (schema.nullable) {
       result.nullable = true;
     }
@@ -51,30 +62,30 @@ export function resolveSchema(
   delete (result as Record<string, unknown>).$ref;
 
   if (result.allOf) {
-    result.allOf = result.allOf.map((s) => s.$ref ? s : resolveSchema(s, root, new Set(visited), depth + 1, maxDepth));
+    result.allOf = result.allOf.map((s) => resolveSchema(s, root, new Set(visited), depth + 1, maxDepth));
   }
 
   if (result.oneOf) {
-    result.oneOf = result.oneOf.map((s) => s.$ref ? s : resolveSchema(s, root, new Set(visited), depth + 1, maxDepth));
+    result.oneOf = result.oneOf.map((s) => resolveSchema(s, root, new Set(visited), depth + 1, maxDepth));
   }
 
   if (result.anyOf) {
-    result.anyOf = result.anyOf.map((s) => s.$ref ? s : resolveSchema(s, root, new Set(visited), depth + 1, maxDepth));
+    result.anyOf = result.anyOf.map((s) => resolveSchema(s, root, new Set(visited), depth + 1, maxDepth));
   }
 
-  if (result.items && !result.items.$ref) {
+  if (result.items) {
     result.items = resolveSchema(result.items, root, new Set(visited), depth + 1, maxDepth);
   }
 
   if (result.properties) {
     const resolvedProps: Record<string, SchemaObject> = {};
     for (const [key, prop] of Object.entries(result.properties)) {
-      resolvedProps[key] = prop.$ref ? prop : resolveSchema(prop, root, new Set(visited), depth + 1, maxDepth);
+      resolvedProps[key] = resolveSchema(prop, root, new Set(visited), depth + 1, maxDepth);
     }
     result.properties = resolvedProps;
   }
 
-  if (result.additionalProperties && typeof result.additionalProperties === 'object' && !(result.additionalProperties as SchemaObject).$ref) {
+  if (result.additionalProperties && typeof result.additionalProperties === 'object') {
     result.additionalProperties = resolveSchema(
       result.additionalProperties as SchemaObject,
       root,
