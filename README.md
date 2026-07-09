@@ -129,6 +129,16 @@ const promise = client.getUsers({ page: 1 }, controller.signal);
 controller.abort(); // cancels the request
 ```
 
+## Agent skill
+
+Install the [gen-client](skills/gen-client/SKILL.md) skill so any compatible AI coding agent can discover and run this tool automatically:
+
+```bash
+npx skills add ajiohjesse/api-client-generator
+```
+
+Once installed, agents will know how to generate clients from OpenAPI specs, verify output, and respect the project's domain vocabulary — just mention generating an API client.
+
 ## Programmatic API
 
 You can also use the generator programmatically:
