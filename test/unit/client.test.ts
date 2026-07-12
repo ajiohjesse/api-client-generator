@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { generateClient } from '../../src/codegen/client.js';
 import { parseSpec } from '../../src/parser/index.js';
 import { loadFromFile } from '../../src/loaders/file.js';
+import type { ParsedOperation } from '../../src/types.js';
 import { resolve, join } from 'node:path';
 
 const fixtureDir = resolve(import.meta.dirname, '../fixtures');
@@ -197,17 +198,17 @@ describe('generateClient', () => {
     });
 
     it('deduplicates method names with _N suffix', () => {
-      const ops = [
+      const ops: ParsedOperation[] = [
         { method: 'GET', path: '/foo', operationId: 'duplicateName', parameters: [], pathParams: [], queryParams: [], responses: [{ status: '200' }], hasBody: false },
         { method: 'GET', path: '/bar', operationId: 'duplicateName', parameters: [], pathParams: [], queryParams: [], responses: [{ status: '200' }], hasBody: false },
       ];
-      const result = generateClient(ops as any, {});
+      const result = generateClient(ops, {});
       expect(result.code).toContain('async duplicateName(');
       expect(result.code).toContain('async duplicateName_1(');
     });
 
     it('renders nullable response refs as Type | null with matching imports', () => {
-      const ops = [
+      const ops: ParsedOperation[] = [
         {
           method: 'GET',
           path: '/category',
@@ -219,7 +220,7 @@ describe('generateClient', () => {
           hasBody: false,
         },
       ];
-      const result = generateClient(ops as any, {});
+      const result = generateClient(ops, {});
 
       expect(result.code).toContain(
         'async getCategory(signal?: AbortSignal): Promise<Category | null>'
@@ -228,7 +229,7 @@ describe('generateClient', () => {
     });
 
     it('renders allOf request bodies as intersections with collected imports', () => {
-      const ops = [
+      const ops: ParsedOperation[] = [
         {
           method: 'POST',
           path: '/pets',
@@ -246,7 +247,7 @@ describe('generateClient', () => {
           hasBody: true,
         },
       ];
-      const result = generateClient(ops as any, {});
+      const result = generateClient(ops, {});
 
       expect(result.code).toContain('data: Item & {\n  breed?: string;\n}');
       expect(result.code).toContain('Promise<Pet>');

@@ -15,6 +15,6 @@ export function loadFromFile(filePath: string): { data: unknown; source: string 
   try {
     return { data: JSON.parse(content), source: filePath };
   } catch {
-    return { data: parseYaml(content) as unknown, source: filePath };
+    return { data: parseYaml(content), source: filePath };
   }
 }

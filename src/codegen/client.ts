@@ -93,9 +93,6 @@ export function generateClient(
       returnType = 'void';
     }
 
-    const method = op.method.toLowerCase();
-    const needsContentType = method !== 'get' && method !== 'head';
-
     methods.push(`  async ${methodName}(${fnParams.join(', ')}): Promise<${returnType}> {${queryString}
     const _headers: Record<string, string> = { ...this.#headers };
     if (this.#contentType && !_headers['Content-Type']) {

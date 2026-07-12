@@ -125,7 +125,7 @@ describe('full generate pipeline', () => {
 
 describe('generated output compiles', () => {
   it('minimal spec output compiles with tsc', () => {
-    const { typesPath, clientPath } = writeGenerated('minimal.yml');
+    const { typesPath } = writeGenerated('minimal.yml');
     const outDir = resolve(typesPath, '..');
     const tsconfigPath = join(outDir, 'tsconfig.json');
 
@@ -151,7 +151,7 @@ describe('generated output compiles', () => {
   }, 30000);
 
   it('schemas spec output compiles with tsc', () => {
-    const { typesPath, clientPath } = writeGenerated('schemas.yml');
+    const { typesPath } = writeGenerated('schemas.yml');
     const outDir = resolve(typesPath, '..');
 
     const tsconfigPath = join(outDir, 'tsconfig.json');
