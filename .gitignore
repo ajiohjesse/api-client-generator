@@ -4,4 +4,4 @@ coverage/
 examples/
 *.tsbuildinfo
 .DS_Store
-
+.scratch/
