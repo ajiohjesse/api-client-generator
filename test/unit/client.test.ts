@@ -63,6 +63,19 @@ describe('generateClient', () => {
       expect(result.code).toContain('async getUserPost(userId: number, postId: string');
     });
 
+    it('renders body and response component refs with matching imports', () => {
+      const result = generateClient(operations, {});
+
+      expect(result.code).toContain(
+        'async createUser(data: CreateUser, signal?: AbortSignal): Promise<User>'
+      );
+      expect(result.code).toContain(
+        'async getUserById(userId: number, params?: GetUserByIdParams, signal?: AbortSignal): Promise<User>'
+      );
+      expect(result.code).toMatch(/import type \{[^}]*CreateUser[^}]*\} from '\.\/types\.js'/);
+      expect(result.code).toMatch(/import type \{[^}]*User[^}]*\} from '\.\/types\.js'/);
+    });
+
     it('encodes path params with encodeURIComponent', () => {
       const result = generateClient(operations, {});
       expect(result.code).toContain('encodeURIComponent(userId)');
@@ -122,6 +135,21 @@ describe('generateClient', () => {
       expect(result.code).toContain('Pet');
     });
 
+    it('renders observable method parameter and response types with collected imports', () => {
+      const result = generateClient(operations, {});
+
+      expect(result.code).toContain("import type { Pet, Order, User } from './types.js';");
+      expect(result.code).toContain(
+        'async updatePet(data: Pet, signal?: AbortSignal): Promise<Pet>'
+      );
+      expect(result.code).toContain(
+        'async getPetById(petId: number, signal?: AbortSignal): Promise<Pet>'
+      );
+      expect(result.code).toContain(
+        'async findPetsByStatus(params: FindPetsByStatusParams, signal?: AbortSignal): Promise<Pet[]>'
+      );
+    });
+
     it('generates query param types for findPetsByStatus', () => {
       const result = generateClient(operations, {});
       expect(result.code).toContain('FindPetsByStatusParams');
@@ -139,6 +167,19 @@ describe('generateClient', () => {
     it('generates methods with required query params', () => {
       const result = generateClient(operations, {});
       expect(result.code).toContain('searchItems');
+    });
+  });
+
+  describe('from schemas fixture', () => {
+    const { operations } = parseFixture('schemas.yml');
+
+    it('renders response component refs and imports for list operations', () => {
+      const result = generateClient(operations, {});
+
+      expect(result.code).toContain("import type { ItemList } from './types.js';");
+      expect(result.code).toContain(
+        'async getItems(signal?: AbortSignal): Promise<ItemList>'
+      );
     });
   });
 
@@ -163,6 +204,54 @@ describe('generateClient', () => {
       const result = generateClient(ops as any, {});
       expect(result.code).toContain('async duplicateName(');
       expect(result.code).toContain('async duplicateName_1(');
+    });
+
+    it('renders nullable response refs as Type | null with matching imports', () => {
+      const ops = [
+        {
+          method: 'GET',
+          path: '/category',
+          operationId: 'getCategory',
+          parameters: [],
+          pathParams: [],
+          queryParams: [],
+          responses: [{ status: '200', schema: { _sourceName: 'Category', nullable: true } }],
+          hasBody: false,
+        },
+      ];
+      const result = generateClient(ops as any, {});
+
+      expect(result.code).toContain(
+        'async getCategory(signal?: AbortSignal): Promise<Category | null>'
+      );
+      expect(result.code).toContain("import type { Category } from './types.js';");
+    });
+
+    it('renders allOf request bodies as intersections with collected imports', () => {
+      const ops = [
+        {
+          method: 'POST',
+          path: '/pets',
+          operationId: 'createPet',
+          parameters: [],
+          pathParams: [],
+          queryParams: [],
+          requestBody: {
+            allOf: [
+              { _sourceName: 'Item' },
+              { type: 'object', properties: { breed: { type: 'string' } } },
+            ],
+          },
+          responses: [{ status: '201', schema: { _sourceName: 'Pet' } }],
+          hasBody: true,
+        },
+      ];
+      const result = generateClient(ops as any, {});
+
+      expect(result.code).toContain('data: Item & {\n  breed?: string;\n}');
+      expect(result.code).toContain('Promise<Pet>');
+      expect(result.code).toMatch(/import type \{[^}]*Item[^}]*\} from '\.\/types\.js'/);
+      expect(result.code).toMatch(/import type \{[^}]*Pet[^}]*\} from '\.\/types\.js'/);
     });
   });
 });

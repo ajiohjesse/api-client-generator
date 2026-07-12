@@ -1,8 +1,8 @@
 import type { SchemaObject } from '../types.js';
 import { toTypeName } from '../naming.js';
 
-/** Internal rendering policy — not part of the declaration or client caller's interface. */
-export type SchemaTypeStrategy = {
+/** Internal rendering policy — not part of the purpose-facing declaration or client interfaces. */
+type SchemaTypeStrategy = {
   refMode: 'import' | 'lookup';
   onRef?: (name: string) => void;
   schemas?: Record<string, SchemaObject>;
@@ -10,7 +10,7 @@ export type SchemaTypeStrategy = {
   allOfMode: 'intersection' | 'extends-detect';
 };
 
-export function formatDescription(description?: string, indent: string = ''): string {
+function formatDescription(description?: string, indent: string = ''): string {
   if (!description) return '';
   const lines = description.split('\n').map((l) => `${indent} * ${l}`).join('\n');
   return `${indent}/**\n${lines}\n${indent} */`;
@@ -22,6 +22,15 @@ function declarationStrategy(schemas: Record<string, SchemaObject>): SchemaTypeS
     schemas,
     includeDescriptions: true,
     allOfMode: 'extends-detect',
+  };
+}
+
+function clientStrategy(onRef: (name: string) => void): SchemaTypeStrategy {
+  return {
+    refMode: 'import',
+    onRef,
+    includeDescriptions: false,
+    allOfMode: 'intersection',
   };
 }
 
@@ -81,7 +90,27 @@ export function renderTypeDeclaration(
   return withDesc(`export type ${typeName} = ${typeDef};`);
 }
 
-export function schemaToType(
+export interface ClientTypeRenderResult {
+  type: string;
+  refs: readonly string[];
+}
+
+/**
+ * Purpose-facing Generated Client type rendering path.
+ * Owns import-mode reference collection, intersection allOf, and no-description
+ * policy so callers receive rendered text and refs — not strategy flags or callbacks.
+ */
+export function renderClientType(schema: SchemaObject | undefined): ClientTypeRenderResult {
+  if (!schema) return { type: 'void', refs: [] };
+
+  const refs = new Set<string>();
+  return {
+    type: schemaToType(schema, clientStrategy((name) => refs.add(name))),
+    refs: Array.from(refs),
+  };
+}
+
+function schemaToType(
   schema: SchemaObject,
   strategy: SchemaTypeStrategy,
   indent: string = ''
