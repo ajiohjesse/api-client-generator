@@ -1,22 +1,14 @@
 import type { ParsedOperation, SchemaObject } from '../types.js';
-import { schemaToType } from './schema-to-type.js';
-import type { SchemaTypeStrategy } from './schema-to-type.js';
+import { renderClientType } from './schema-to-type.js';
 import {
   operationMethodName,
   buildParamTypeName,
 } from './utils.js';
 
-function schemaToTypeString(schema: SchemaObject | undefined, importTypes: Set<string>): string {
-  if (!schema) return 'void';
-
-  const strategy: SchemaTypeStrategy = {
-    refMode: 'import',
-    onRef: (name) => importTypes.add(name),
-    includeDescriptions: false,
-    allOfMode: 'intersection',
-  };
-
-  return schemaToType(schema, strategy);
+function renderMethodType(schema: SchemaObject | undefined, importTypes: Set<string>): string {
+  const { type, refs } = renderClientType(schema);
+  for (const ref of refs) importTypes.add(ref);
+  return type;
 }
 
 export interface GeneratedClient {
@@ -51,12 +43,12 @@ export function generateClient(
     const fnParams: string[] = [];
 
     for (const pp of pathParams) {
-      const tsType = schemaToTypeString(pp.schema, importTypes);
+      const tsType = renderMethodType(pp.schema, importTypes);
       fnParams.push(`${pp.name}: ${tsType}`);
     }
 
     if (hasBody) {
-      const bodyType = schemaToTypeString(op.requestBody, importTypes);
+      const bodyType = renderMethodType(op.requestBody, importTypes);
       fnParams.push(`data: ${bodyType}`);
     }
 
@@ -64,7 +56,7 @@ export function generateClient(
       fnParams.push(`params${queryParams.every((p) => p.required) ? '' : '?'}: ${paramsTypeName}`);
 
       const props = queryParams.map((qp) => {
-        const tsType = schemaToTypeString(qp.schema, importTypes);
+        const tsType = renderMethodType(qp.schema, importTypes);
         return `  ${qp.name}${qp.required ? '' : '?'}: ${tsType};`;
       }).join('\n');
       extraTypes.push(`export interface ${paramsTypeName} {\n${props}\n}`);
@@ -96,13 +88,10 @@ export function generateClient(
     if (is204) {
       returnType = 'void';
     } else if (successSchema?.schema) {
-      returnType = schemaToTypeString(successSchema.schema, importTypes);
+      returnType = renderMethodType(successSchema.schema, importTypes);
     } else {
       returnType = 'void';
     }
-
-    const method = op.method.toLowerCase();
-    const needsContentType = method !== 'get' && method !== 'head';
 
     methods.push(`  async ${methodName}(${fnParams.join(', ')}): Promise<${returnType}> {${queryString}
     const _headers: Record<string, string> = { ...this.#headers };

@@ -1,6 +1,8 @@
 import type { SchemaObject } from '../types.js';
+import { toTypeName } from '../naming.js';
 
-export type SchemaTypeStrategy = {
+/** Internal rendering policy — not part of the purpose-facing declaration or client interfaces. */
+type SchemaTypeStrategy = {
   refMode: 'import' | 'lookup';
   onRef?: (name: string) => void;
   schemas?: Record<string, SchemaObject>;
@@ -8,13 +10,107 @@ export type SchemaTypeStrategy = {
   allOfMode: 'intersection' | 'extends-detect';
 };
 
-export function formatDescription(description?: string, indent: string = ''): string {
+function formatDescription(description?: string, indent: string = ''): string {
   if (!description) return '';
   const lines = description.split('\n').map((l) => `${indent} * ${l}`).join('\n');
-  return `${indent}/**\n${lines}\n${indent} */\n`;
+  return `${indent}/**\n${lines}\n${indent} */`;
 }
 
-export function schemaToType(
+function declarationStrategy(schemas: Record<string, SchemaObject>): SchemaTypeStrategy {
+  return {
+    refMode: 'lookup',
+    schemas,
+    includeDescriptions: true,
+    allOfMode: 'extends-detect',
+  };
+}
+
+function clientStrategy(onRef: (name: string) => void): SchemaTypeStrategy {
+  return {
+    refMode: 'import',
+    onRef,
+    includeDescriptions: false,
+    allOfMode: 'intersection',
+  };
+}
+
+/**
+ * Purpose-facing declaration rendering path.
+ * Owns descriptions, nullable handling, allOf extends detection, and
+ * interface-vs-type choice so callers never assemble rendering policy.
+ */
+export function renderTypeDeclaration(
+  name: string,
+  schema: SchemaObject,
+  schemas: Record<string, SchemaObject>
+): string {
+  const typeName = toTypeName(name);
+  const schemaClean: SchemaObject = { ...schema };
+  delete (schemaClean as { _sourceName?: string })._sourceName;
+
+  const desc = formatDescription(schema.description);
+  const strategy = declarationStrategy(schemas);
+  const typeDef = schemaToType(schemaClean, strategy, '');
+
+  const withDesc = (declaration: string): string =>
+    desc ? `${desc}\n\n${declaration}` : declaration;
+
+  if (schema.allOf && schema.allOf.length > 0 && !schema.nullable) {
+    const extendsParts: string[] = [];
+    const ownProps: Record<string, SchemaObject> = {};
+
+    for (const sub of schema.allOf) {
+      if (sub._sourceName) {
+        extendsParts.push(sub._sourceName);
+      } else if (sub.properties) {
+        Object.assign(ownProps, sub.properties);
+      }
+    }
+
+    if (extendsParts.length > 0 && Object.keys(ownProps).length === 0) {
+      return withDesc(`export interface ${typeName} extends ${extendsParts.join(', ')} {}`);
+    }
+    if (extendsParts.length > 0) {
+      const ownSchema: SchemaObject = { type: 'object', properties: ownProps, required: schema.required };
+      const mergedType = schemaToType(ownSchema, strategy, '');
+      return withDesc(`export interface ${typeName} extends ${extendsParts.join(', ')} ${mergedType}`);
+    }
+    return withDesc(`export type ${typeName} = ${typeDef};`);
+  }
+
+  if (schema.oneOf || schema.anyOf) {
+    return withDesc(`export type ${typeName} = ${typeDef};`);
+  }
+
+  // Nullable object shapes must be type aliases — `interface X {…} | null` is invalid TS.
+  if ((schema.type === 'object' || schema.properties) && schema.properties && !schema.nullable) {
+    return withDesc(`export interface ${typeName} ${typeDef}`);
+  }
+
+  return withDesc(`export type ${typeName} = ${typeDef};`);
+}
+
+export interface ClientTypeRenderResult {
+  type: string;
+  refs: readonly string[];
+}
+
+/**
+ * Purpose-facing Generated Client type rendering path.
+ * Owns import-mode reference collection, intersection allOf, and no-description
+ * policy so callers receive rendered text and refs — not strategy flags or callbacks.
+ */
+export function renderClientType(schema: SchemaObject | undefined): ClientTypeRenderResult {
+  if (!schema) return { type: 'void', refs: [] };
+
+  const refs = new Set<string>();
+  return {
+    type: schemaToType(schema, clientStrategy((name) => refs.add(name))),
+    refs: Array.from(refs),
+  };
+}
+
+function schemaToType(
   schema: SchemaObject,
   strategy: SchemaTypeStrategy,
   indent: string = ''
@@ -82,8 +178,8 @@ export function schemaToType(
       const requiredSet = new Set(schema.required || []);
       for (const [key, prop] of Object.entries(schema.properties)) {
         if (strategy.includeDescriptions) {
-          const desc = formatDescription(prop.description, indent + '  ');
-          if (desc) lines.push(desc);
+          const propDesc = formatDescription(prop.description, indent + '  ');
+          if (propDesc) lines.push(propDesc);
         }
         const optional = requiredSet.has(key) ? '' : '?';
         const propType = schemaToType(prop, strategy, indent + '  ');

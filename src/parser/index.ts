@@ -83,10 +83,10 @@ export function parseSpec(data: unknown): {
 
   for (const [path, pathItem] of Object.entries(spec.paths)) {
     for (const method of methods) {
-      const operation = (pathItem as PathItem)[method];
+      const operation = pathItem[method];
       if (!operation) continue;
 
-      const allParams = mergeParentParams(pathItem as PathItem, operation);
+      const allParams = mergeParentParams(pathItem, operation);
 
       const op: ParsedOperation = {
         method: method.toUpperCase(),

@@ -15,14 +15,16 @@ export async function generateCommand(
   if (existsSync(outDir)) {
     try {
       accessSync(outDir, W_OK);
-    } catch {
-      throw new Error(`Output directory is not writable: ${outDir}`);
+    } catch (err) {
+      throw new Error(`Output directory is not writable: ${outDir}`, { cause: err });
     }
   } else {
     try {
       mkdirSync(outDir, { recursive: true });
     } catch (err) {
-      throw new Error(`Cannot create output directory "${outDir}": ${(err as Error).message}`);
+      throw new Error(`Cannot create output directory "${outDir}": ${(err as Error).message}`, {
+        cause: err,
+      });
     }
   }
 
@@ -30,7 +32,9 @@ export async function generateCommand(
   try {
     loadResult = await loadSpec(input);
   } catch (err) {
-    throw new Error(`Failed to load spec from "${input}": ${(err as Error).message}`);
+    throw new Error(`Failed to load spec from "${input}": ${(err as Error).message}`, {
+      cause: err,
+    });
   }
 
   const spec = loadResult.data as Record<string, unknown>;
@@ -44,7 +48,7 @@ export async function generateCommand(
   try {
     result = generate(spec, genOptions);
   } catch (err) {
-    throw new Error(`Failed to generate client: ${(err as Error).message}`);
+    throw new Error(`Failed to generate client: ${(err as Error).message}`, { cause: err });
   }
 
   try {
@@ -52,6 +56,6 @@ export async function generateCommand(
     writeFileSync(join(outDir, 'client.ts'), result.clientCode, 'utf-8');
     writeFileSync(join(outDir, 'index.ts'), result.indexCode, 'utf-8');
   } catch (err) {
-    throw new Error(`Failed to write output files: ${(err as Error).message}`);
+    throw new Error(`Failed to write output files: ${(err as Error).message}`, { cause: err });
   }
 }

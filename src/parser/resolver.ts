@@ -87,7 +87,7 @@ export function resolveSchema(
 
   if (result.additionalProperties && typeof result.additionalProperties === 'object') {
     result.additionalProperties = resolveSchema(
-      result.additionalProperties as SchemaObject,
+      result.additionalProperties,
       root,
       new Set(visited),
       depth + 1,

@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeAll } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { loadFromFile } from '../../src/loaders/file.js';
 import { resolve, join } from 'node:path';
 
