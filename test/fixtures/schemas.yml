@@ -110,3 +110,11 @@ components:
             $ref: "#/components/schemas/TreeNode"
     EmptySchema:
       type: object
+    NullableObject:
+      type: object
+      nullable: true
+      description: A nullable object declaration
+      properties:
+        value:
+          type: string
+          description: Its optional value

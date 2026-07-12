@@ -38,6 +38,50 @@ describe('generateTypes', () => {
     expect(result.types).toContain('| null');
   });
 
+  it('renders nullable object declarations and descriptions as valid TypeScript', () => {
+    const schemas = loadSchemas('schemas.yml') as Record<string, any>;
+    const result = generateTypes(schemas);
+
+    expect(result.types).toContain(`/**
+ * A nullable object declaration
+ */
+
+export type NullableObject = {
+  /**
+   * Its optional value
+   */
+  value?: string;
+} | null;`);
+  });
+
+  it('renders property descriptions without extra blank lines', () => {
+    const schemas = loadSchemas('schemas.yml') as Record<string, any>;
+    const result = generateTypes(schemas);
+
+    expect(result.types).toContain(`  /**
+   * A display label
+   */
+  label?: string;`);
+  });
+
+  it('renders allOf declarations as interface extends with own properties', () => {
+    const schemas = loadSchemas('schemas.yml') as Record<string, any>;
+    const result = generateTypes(schemas);
+
+    expect(result.types).toContain(`export interface Pet extends Item {
+  breed?: string;
+}`);
+  });
+
+  it('renders oneOf and anyOf as type aliases', () => {
+    const schemas = loadSchemas('schemas.yml') as Record<string, any>;
+    const result = generateTypes(schemas);
+
+    expect(result.types).toContain('export type _Error = ValidationError | SystemError;');
+    expect(result.types).toContain('export type Response = SuccessResponse | _Error;');
+  });
+
+
   it('generates array types', () => {
     const schemas = loadSchemas('schemas.yml') as Record<string, any>;
     const result = generateTypes(schemas);
