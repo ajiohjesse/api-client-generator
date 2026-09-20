@@ -4,8 +4,10 @@ import { join, resolve } from 'node:path';
 import { tmpdir } from 'node:os';
 import { rmSync } from 'node:fs';
 import { generate } from '../../src/codegen/index.js';
+import { generateCommand } from '../../src/commands/generate.js';
 import { loadFromFile } from '../../src/loaders/file.js';
 import { execSync } from 'node:child_process';
+import { format, resolveConfig } from 'prettier';
 
 const fixtureDir = resolve(import.meta.dirname, '../fixtures');
 
@@ -120,6 +122,33 @@ describe('full generate pipeline', () => {
     const { clientPath } = writeGenerated('params.yml');
     const client = readFileSync(clientPath, 'utf-8');
     expect(client).toContain('export interface GetUserByIdParams');
+  });
+});
+
+describe('CLI output formatting', () => {
+  it('formats generated files using the output directory Prettier configuration', async () => {
+    const outDir = join(tmpDir, 'formatted-output');
+    mkdirSync(outDir, { recursive: true });
+    writeFileSync(join(outDir, '.prettierrc.json'), '{ "semi": false }', 'utf-8');
+
+    await generateCommand(join(fixtureDir, 'params.yml'), outDir, {});
+
+    const clientPath = join(outDir, 'client.ts');
+    const client = readFileSync(clientPath, 'utf-8');
+    const config = await resolveConfig(clientPath);
+
+    expect(client).toBe(await format(client, { ...config, filepath: clientPath, parser: 'typescript' }));
+    expect(client).toContain('from "./types.js"\n');
+  });
+
+  it('can skip Prettier formatting', async () => {
+    const outDir = join(tmpDir, 'unformatted-output');
+
+    await generateCommand(join(fixtureDir, 'params.yml'), outDir, { format: false });
+
+    const client = readFileSync(join(outDir, 'client.ts'), 'utf-8');
+
+    expect(client).not.toBe(await format(client, { parser: 'typescript' }));
   });
 });
 

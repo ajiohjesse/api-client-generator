@@ -1,6 +1,7 @@
 import { writeFileSync, mkdirSync, existsSync, accessSync } from 'node:fs';
 import { W_OK } from 'node:constants';
 import { join, resolve } from 'node:path';
+import { format, resolveConfig } from 'prettier';
 import { loadSpec } from '../loaders/index.js';
 import { generate } from '../codegen/index.js';
 import type { GeneratorOptions } from '../types.js';
@@ -8,7 +9,7 @@ import type { GeneratorOptions } from '../types.js';
 export async function generateCommand(
   input: string,
   output: string,
-  options: { clientName?: string }
+  options: { clientName?: string; format?: boolean }
 ): Promise<void> {
   const outDir = resolve(output);
 
@@ -52,10 +53,34 @@ export async function generateCommand(
   }
 
   try {
-    writeFileSync(join(outDir, 'types.ts'), result.typesCode, 'utf-8');
-    writeFileSync(join(outDir, 'client.ts'), result.clientCode, 'utf-8');
-    writeFileSync(join(outDir, 'index.ts'), result.indexCode, 'utf-8');
+    const files = [
+      { path: join(outDir, 'types.ts'), code: result.typesCode },
+      { path: join(outDir, 'client.ts'), code: result.clientCode },
+      { path: join(outDir, 'index.ts'), code: result.indexCode },
+    ];
+
+    const formattedFiles = options.format === false
+      ? files
+      : await Promise.all(
+        files.map(async (file) => ({
+          ...file,
+          code: await formatGeneratedCode(file.code, file.path),
+        }))
+      );
+
+    for (const file of formattedFiles) {
+      writeFileSync(file.path, file.code, 'utf-8');
+    }
   } catch (err) {
-    throw new Error(`Failed to write output files: ${(err as Error).message}`, { cause: err });
+    throw new Error(`Failed to format or write output files: ${(err as Error).message}`, { cause: err });
   }
+}
+
+async function formatGeneratedCode(code: string, filepath: string): Promise<string> {
+  const config = await resolveConfig(filepath);
+  return format(code, {
+    ...config,
+    filepath,
+    parser: 'typescript',
+  });
 }
