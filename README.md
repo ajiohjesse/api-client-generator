@@ -51,7 +51,12 @@ npx @rehx/api-client-generator generate -i https://api.example.com/openapi.json 
 
 # With a custom client class name
 npx @rehx/api-client-generator generate -i ./spec.yaml -o ./src/api --name MyApi
+
+# Skip formatting (generated files are formatted with Prettier by default)
+npx @rehx/api-client-generator generate -i ./spec.yaml -o ./src/api --no-format
 ```
+
+Generated TypeScript is formatted with Prettier by default. If a Prettier configuration is found for the output directory, its settings are applied.
 
 ### Generated output
 
