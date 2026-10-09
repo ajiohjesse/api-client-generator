@@ -4,7 +4,7 @@
   "description": "Generate a typesafe fetch-based API client from an OpenAPI 3.x spec",
   "type": "module",
   "bin": {
-    "api-client-generator": "./dist/cli.js"
+    "api-client-generator": "dist/cli.js"
   },
   "files": [
     "dist"
@@ -56,6 +56,7 @@
     "@commitlint/cli": "^19.4.0",
     "@commitlint/config-conventional": "^19.4.0",
     "@eslint/js": "^10.0.1",
+    "@semantic-release/exec": "^7.1.0",
     "@semantic-release/github": "^11.0.0",
     "@semantic-release/npm": "^12.0.0",
     "@types/js-yaml": "^4.0.9",
