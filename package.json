@@ -4,7 +4,7 @@
   "description": "Generate a typesafe fetch-based API client from an OpenAPI 3.x spec",
   "type": "module",
   "bin": {
-    "api-client-generator": "./dist/cli.js"
+    "api-client-generator": "dist/cli.js"
   },
   "files": [
     "dist"
