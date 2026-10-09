@@ -48,6 +48,52 @@ describe('renderClientType', () => {
     expect(result.refs).toEqual(['Pet']);
   });
 
+  it('parenthesizes a union item type so the whole union is the array element', () => {
+    const result = renderClientType({
+      type: 'array',
+      items: {
+        oneOf: [
+          { type: 'object', properties: { status: { enum: ['recorded'] } }, required: ['status'] },
+          { type: 'object', properties: { status: { enum: ['not_found'] } }, required: ['status'] },
+        ],
+      },
+    });
+
+    expect(result.type).toBe("({\n  status: 'recorded';\n} | {\n  status: 'not_found';\n})[]");
+  });
+
+  it('parenthesizes anyOf, enum, intersection, and nullable array items', () => {
+    const arrayOf = (items: Parameters<typeof renderClientType>[0]) =>
+      renderClientType({ type: 'array', items }).type;
+
+    expect(arrayOf({ anyOf: [{ _sourceName: 'Cat' }, { _sourceName: 'Dog' }] })).toBe('(Cat | Dog)[]');
+    expect(arrayOf({ type: 'string', enum: ['a', 'b'] })).toBe("('a' | 'b')[]");
+    expect(arrayOf({ allOf: [{ _sourceName: 'Item' }, { _sourceName: 'Audit' }] })).toBe('(Item & Audit)[]');
+    expect(arrayOf({ _sourceName: 'Pet', nullable: true })).toBe('(Pet | null)[]');
+    expect(arrayOf({ type: 'string', nullable: true })).toBe('(string | null)[]');
+  });
+
+  it('leaves single-type array items unparenthesized', () => {
+    const arrayOf = (items: Parameters<typeof renderClientType>[0]) =>
+      renderClientType({ type: 'array', items }).type;
+
+    expect(arrayOf({ type: 'string' })).toBe('string[]');
+    expect(arrayOf({ type: 'string', enum: ['only'] })).toBe("'only'[]");
+    expect(arrayOf({ oneOf: [{ _sourceName: 'Pet' }] })).toBe('Pet[]');
+    expect(arrayOf({ type: 'array', items: { type: 'number' } })).toBe('number[][]');
+    expect(arrayOf({ type: 'object', properties: { tag: { enum: ['a', 'b'] } } })).toBe(
+      "{\n  tag?: 'a' | 'b';\n}[]"
+    );
+  });
+
+  it('parenthesizes a union member of an intersection', () => {
+    const result = renderClientType({
+      allOf: [{ _sourceName: 'Base' }, { oneOf: [{ _sourceName: 'Cat' }, { _sourceName: 'Dog' }] }],
+    });
+
+    expect(result.type).toBe('Base & (Cat | Dog)');
+  });
+
   it('renders oneOf as a union of collected references', () => {
     const result = renderClientType({
       oneOf: [{ _sourceName: 'ValidationError' }, { _sourceName: 'SystemError' }],

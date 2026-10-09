@@ -110,6 +110,29 @@ export function renderClientType(schema: SchemaObject | undefined): ClientTypeRe
   };
 }
 
+/**
+ * Whether a schema renders as a bare union or intersection at its top level.
+ * `[]` and `&` bind tighter than `|`, so such a type needs parentheses before
+ * it becomes an array item or an intersection member. Mirrors the branch order
+ * of schemaToType; a named reference renders as one identifier and never does.
+ */
+function topLevelComposite(
+  schema: SchemaObject,
+  strategy: SchemaTypeStrategy
+): 'union' | 'intersection' | null {
+  if (schema.nullable) return 'union';
+  if (schema._sourceName) return null;
+
+  for (const members of [schema.allOf, schema.oneOf, schema.anyOf]) {
+    if (!members || members.length === 0) continue;
+    if (members.length === 1) return topLevelComposite(members[0], strategy);
+    return members === schema.allOf ? 'intersection' : 'union';
+  }
+
+  if (schema.enum) return schema.enum.length > 1 ? 'union' : null;
+  return null;
+}
+
 function schemaToType(
   schema: SchemaObject,
   strategy: SchemaTypeStrategy,
@@ -136,7 +159,11 @@ function schemaToType(
     if (strategy.allOfMode === 'extends-detect' && schema.allOf.length === 1) {
       return schemaToType(schema.allOf[0], strategy, indent);
     }
-    const parts = schema.allOf.map((s) => schemaToType(s, strategy, indent));
+    const single = schema.allOf.length === 1;
+    const parts = schema.allOf.map((s) => {
+      const part = schemaToType(s, strategy, indent);
+      return !single && topLevelComposite(s, strategy) === 'union' ? `(${part})` : part;
+    });
     return parts.join(' & ');
   }
 
@@ -162,7 +189,7 @@ function schemaToType(
   if (schema.type === 'array') {
     if (schema.items) {
       const itemType = schemaToType(schema.items, strategy, indent);
-      return `${itemType}[]`;
+      return topLevelComposite(schema.items, strategy) ? `(${itemType})[]` : `${itemType}[]`;
     }
     return 'unknown[]';
   }
